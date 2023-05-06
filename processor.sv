@@ -1,5 +1,5 @@
 `include "internal_defines.vh"
-
+`default_nettype none
 module processor(
     input logic[11:0] instruction,
     input logic clock, reset,
@@ -63,20 +63,23 @@ module scheduler(
                                         .D(instruction), .Q(instr_fetched));
     
     always_ff @(posedge clock, posedge reset) begin
-        if (reset)
+        if (reset) begin
             PE_counter <= 2'b00;
             global_counter <= 3'b000;
-        else
+        end 
+        else begin
             PE_counter <= PE_counter + 1'b1;
             global_counter <= global_counter + 3'b001;
+        end
+            
     end
 
+    alu_op_t pe_alu_op;
+    sel_op_t pe_sel_op_imm;
+    assign  pe_alu_op = alu_op_t'(instruction[1:0]);
+    assign  pe_sel_op_imm = sel_op_t'('h7);
     always_comb begin
-        ctr_signals_s = '{
-            sel_op_0: IN_OP,
-            sel_op_1: IN_OP,
-            alu_op: alu_op_t'(instruction[1:0])
-        };
+        ctr_signals_s = '{pe_sel_op_imm,pe_sel_op_imm,pe_alu_op};
         input_op0 = instruction[11:8];
         input_op1 = instruction[7:4];
         sel_res = PE_counter; //depending on global counter compared to PE counter
@@ -90,20 +93,20 @@ module scheduler(
             //cannot select PE7's ouput as operand
             if (instruction[10:8] < global_counter) begin 
                 ctr_signals_s.sel_op_0 = sel_op_t'(instruction[10:8]);
-            end else {
+            end else begin
                 clear = 1'b1;
                 instr_fault = 1'b1;
-            }
+            end
         end
 
         if (~instruction[2]) begin
             //cannot select PE7's ouput as operand 
             if (instruction[6:4] < global_counter) begin  
                 ctr_signals_s.sel_op_1 = sel_op_t'(instruction[6:4]);
-            end else {
+            end else begin
                 clear = 1'b1;
                 instr_fault = 1'b1;
-            }
+            end
         end
 
         
